@@ -20,6 +20,9 @@
   <button class="btn" type="submit">Show</button>
 </form>
 
+{% if static_site %}
+<div class="scroll" id="static-table"><p class="muted">Loading…</p></div>
+{% else %}
 <div class="scroll">
 <table class="data sortable">
   <thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="n">Age</th><th class="n">G</th>
@@ -42,5 +45,6 @@
   </tbody>
 </table>
 </div>
+{% endif %}
 <p class="muted small">Top 100, regular season. Click a column header to re-sort the table.</p>
 {% endblock %}

@@ -29,7 +29,7 @@ Surplus is true value minus what the player actually cost. Both are in today's d
 <table class="data sortable">
   <thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="n">Age</th><th class="n">G</th>
     <th class="n">True value</th><th class="n">Cap hit</th><th class="n">Surplus</th><th class="n">Pos. rank</th><th></th></tr></thead>
-  <tbody>
+  <tbody{% if static_site %} id="static-rows"{% endif %}>
   {% for r in results %}
     <tr>
       <td class="muted">{{ loop.index }}</td>

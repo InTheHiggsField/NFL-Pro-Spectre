@@ -64,6 +64,24 @@ Then open http://127.0.0.1:8000. It needs `data/nfl.sqlite`, so build the databa
 The code is in `web/`: `app.py` (routes), `queries.py` (all SQL), `templates/` (pages), `static/` (CSS, JS,
 and a local copy of Chart.js so it works offline).
 
+## Publishing to GitHub Pages (static copy)
+
+GitHub Pages only serves files, so `build_site.py` renders every page of the website to `site/`
+(about 26,000 pages, 200 MB, under a minute). Pages that filter or search (player finder, value portal,
+"similar for less", projections, search and the suggestions box) ship as JSON in `site/data/` and filter in
+the browser with `web/static/static-pages.js`, giving the same results as the live site.
+
+```
+python build_site.py                      # writes site/
+python -m http.server 8001 -d site        # preview at http://localhost:8001
+```
+
+`.github/workflows/pages.yml` does the whole thing on GitHub on every push to `main`, every Tuesday
+morning (to pick up the latest week) and on demand from the Actions tab: it builds the database from nflverse,
+trains the models, runs `build_site.py --base /<repo>/` and publishes. Nothing generated is committed.
+One-time setup: in the repo go to Settings > Pages and set Source to "GitHub Actions". On a free GitHub
+plan the repo has to be public for Pages to work.
+
 ## Models: true value and next-season outlook
 
 ```
@@ -133,7 +151,8 @@ Money columns end in `_musd` and are in millions of US dollars.
 ```
 build_database.py        command line entry point
 run_web.py               starts the website
-web/                     the website (FastAPI + Jinja templates)
+build_site.py            renders the static GitHub Pages copy of the website into site/
+web/                     the website (FastAPI + Jinja templates; static_site.py = static build)
 train_models.py          trains the models and writes their scores into the database
 analytics/               features.py, true_value.py, projection.py, pipeline.py
 nfldb/catalog.py         list of every dataset and where it comes from (add sources here)

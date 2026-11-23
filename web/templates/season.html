@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card-head">
   <h1>{{ season }} season</h1>
-  <form method="get" onsubmit="location.href='/seasons/'+this.s.value; return false;">
+  <form method="get" onsubmit="location.href=siteHref('/seasons/'+this.s.value); return false;">
     <select name="s" onchange="this.form.onsubmit()">{% for s in all_seasons %}<option {% if s == season %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
   </form>
 </div>

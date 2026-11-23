@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ base + 1 }} projections · NFL Pro Spectre{% endblock %}
 {% block content %}
-<h1>{{ base + 1 }} projections</h1>
-<p class="muted">Projected true value for {{ base + 1 }}, from each player's {{ base }}{% if base == bases[0] and bases|length > 1 %} pace so far{% endif %} and {{ base - 1 }} seasons.
+<h1 id="static-heading">{{ base + 1 }} projections</h1>
+<p class="muted" id="static-intro">Projected true value for {{ base + 1 }}, from each player's {{ base }}{% if base == bases[0] and bases|length > 1 %} pace so far{% endif %} and {{ base - 1 }} seasons.
   <b>Strong</b> means projected at least 15% above his {{ base }} value, <b>Weak</b> at least 15% below. <a href="/models">How accurate is this?</a></p>
 <form class="filters" method="get" action="/projections">
   <label>Projecting
@@ -25,6 +25,9 @@
   </label>
   <button class="btn" type="submit">Show</button>
 </form>
+{% if static_site %}
+<div class="scroll" id="static-table"><p class="muted">Loading…</p></div>
+{% else %}
 <div class="scroll">
 <table class="data sortable">
   <thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="n">Age</th>
@@ -48,5 +51,6 @@
   </tbody>
 </table>
 </div>
+{% endif %}
 <p class="muted small">Values are in today's cap dollars ({{ latest_cap|money }} cap). Backups and special teamers worth under 1% of the cap are left out.</p>
 {% endblock %}

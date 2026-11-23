@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}NFL Pro Spectre{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script>window.SITE = {base: {{ site_base|tojson }}, static: {{ static_site|tojson }}};</script>
   <script src="/static/vendor/chart-4.4.1.umd.min.js" defer></script>
   <script src="/static/app.js" defer></script>
+  {% if static_site %}<script src="/static/static-pages.js" defer></script>{% endif %}
 </head>
 <body>
 <header class="topbar">
@@ -25,13 +27,14 @@
     </form>
   </div>
 </header>
-<main class="wrap">
+<main class="wrap"{% if static_page %} data-static-page="{{ static_page }}"{% endif %}>
 {% block content %}{% endblock %}
 </main>
 <footer class="wrap footer">
   Data: nflverse (NFL, Pro Football Reference, Next Gen Stats, ESPN, OverTheCap). Money in millions of US dollars.
   <a href="/models">How the models work</a>
 </footer>
+{% if static_config is defined %}<script type="application/json" id="page-config">{{ static_config|tojson }}</script>{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -60,6 +60,8 @@ def fmt_pct(v):
 
 
 templates.env.filters.update(num=fmt_num, money=fmt_money, pct=fmt_pct)
+# build_site.py flips these to render the static GitHub Pages copy of the site.
+templates.env.globals.update(static_site=False, site_base="/", static_page=None)
 
 
 def render(request: Request, name: str, **ctx):
@@ -109,16 +111,19 @@ def players(request: Request, season: int | None = None, position: str = "", tea
     seasons = [s for s in Q.seasons_with_stats(con)]
     season = season or Q.latest_season(con)
     results = Q.player_finder(con, season, position or None, team or None, sort)
-    stat_key = Q.stat_set_for(position, position) if position else "QB_ALL"
-    if stat_key == "QB_ALL":
-        cols = [("passing_yards", "Pass Yds", 0), ("passing_tds", "Pass TD", 0), ("rushing_yards", "Rush Yds", 0),
-                ("rushing_tds", "Rush TD", 0), ("receiving_yards", "Rec Yds", 0), ("receiving_tds", "Rec TD", 0),
-                ("def_sacks", "Sacks", 1), ("def_interceptions", "Int", 0), ("fantasy_points_ppr", "PPR", 1)]
-    else:
-        cols = Q.STAT_SETS[stat_key] or [("games", "Games", 0)]
+    cols = finder_columns(position)
     return render(request, "players.html", results=results, cols=cols, seasons=seasons, season=season,
                   position=position, team=team, sort=sort, positions=Q.POSITION_FILTERS,
                   teams=Q.franchises(con), sortable=Q.SORTABLE)
+
+
+def finder_columns(position: str) -> list[tuple[str, str, int]]:
+    """Stat columns the player finder shows for a position filter ("" = all positions)."""
+    if not position:
+        return [("passing_yards", "Pass Yds", 0), ("passing_tds", "Pass TD", 0), ("rushing_yards", "Rush Yds", 0),
+                ("rushing_tds", "Rush TD", 0), ("receiving_yards", "Rec Yds", 0), ("receiving_tds", "Rec TD", 0),
+                ("def_sacks", "Sacks", 1), ("def_interceptions", "Int", 0), ("fantasy_points_ppr", "PPR", 1)]
+    return Q.STAT_SETS[Q.stat_set_for(position, position)] or [("games", "Games", 0)]
 
 
 @app.get("/players/{gsis_id}", response_class=HTMLResponse)

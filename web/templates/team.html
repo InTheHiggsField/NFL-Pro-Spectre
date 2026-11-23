@@ -7,8 +7,8 @@
     <h1>{{ t.team_name }}</h1>
     <p class="facts muted">{{ t.team_division }}</p>
   </div>
-  <form class="season-pick" method="get">
-    <label>Season <select name="season" onchange="this.form.submit()">
+  <form class="season-pick" method="get" onsubmit="location.href=siteHref('/teams/{{ t.team_abbr }}?season='+this.season.value); return false;">
+    <label>Season <select name="season" onchange="this.form.onsubmit()">
       {% for s in seasons %}<option {% if s == season %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
   </form>
 </section>
@@ -93,7 +93,7 @@ window.addEventListener("DOMContentLoaded", () => {
     options: { plugins: { legend: { display: false },
       tooltip: { callbacks: { afterLabel: c => { const r = h[c.dataIndex];
         return `${r.wins}-${r.losses}${r.ties ? "-" + r.ties : ""}` + (r.won_super_bowl ? " · Super Bowl champs" : r.made_playoffs ? " · Playoffs" : ""); } } } },
-      onClick: (e, els) => { if (els.length) location.search = "?season=" + h[els[0].index].season; } }
+      onClick: (e, els) => { if (els.length) location.href = siteHref("/teams/{{ t.team_abbr }}?season=" + h[els[0].index].season); } }
   });
 });
 </script>
