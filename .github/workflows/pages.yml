@@ -1,0 +1,67 @@
+# Builds the database from nflverse, trains the models, renders the static site
+# (build_site.py) and publishes it to GitHub Pages. About 3-4 minutes per run.
+#
+# One-time setup: repo Settings > Pages > Build and deployment > Source: "GitHub Actions".
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:          # "Run workflow" button on the Actions tab
+  schedule:
+    - cron: "0 11 * * 2"      # Tuesdays 11:00 UTC, after Monday Night Football, to pick up the new week
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # Keep the downloaded nflverse files between runs so only the current season is re-downloaded.
+      - uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: nflverse-${{ github.run_id }}
+          restore-keys: nflverse-
+
+      - name: Build database
+        run: python build_database.py
+
+      - name: Train models
+        run: python train_models.py
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Render static site
+        run: python build_site.py --base "${{ steps.pages.outputs.base_path }}/"
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
