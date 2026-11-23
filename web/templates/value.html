@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Value portal · NFL Pro Spectre{% endblock %}
+{% block content %}
+<h1>Value portal</h1>
+<p class="muted">True value is what a season's production would cost on the open market, learned from thousands of real contracts.
+Surplus is true value minus what the player actually cost. Both are in today's dollars (today's cap: {{ latest_cap|money }}).
+<a href="/models">How it works</a></p>
+<form class="filters" method="get" action="/value">
+  <label>Season
+    <select name="season">{% for s in seasons %}<option value="{{ s.season }}" {% if s.season == season %}selected{% endif %}>{{ s.season }}{% if s.partial %} (so far){% endif %}</option>{% endfor %}</select>
+  </label>
+  <label>Position
+    <select name="pos"><option value="">All</option>
+      {% for p in positions %}<option value="{{ p }}" {% if p == pos %}selected{% endif %}>{{ pos_names[p] }}</option>{% endfor %}</select>
+  </label>
+  <label>Max cap hit ($M, today)
+    <input type="number" name="max_cost" min="0" step="0.5" value="{{ max_cost }}" placeholder="Any">
+  </label>
+  <label>Sort by
+    <select name="sort">
+      <option value="surplus" {% if sort == 'surplus' %}selected{% endif %}>Biggest bargain</option>
+      <option value="value" {% if sort == 'value' %}selected{% endif %}>Highest true value</option>
+      <option value="cheapest" {% if sort == 'cheapest' %}selected{% endif %}>Cheapest</option>
+    </select>
+  </label>
+  <button class="btn" type="submit">Show</button>
+</form>
+<div class="scroll">
+<table class="data sortable">
+  <thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="n">Age</th><th class="n">G</th>
+    <th class="n">True value</th><th class="n">Cap hit</th><th class="n">Surplus</th><th class="n">Pos. rank</th><th></th></tr></thead>
+  <tbody>
+  {% for r in results %}
+    <tr>
+      <td class="muted">{{ loop.index }}</td>
+      <td><a href="/players/{{ r.gsis_id }}">{{ r.display_name }}</a></td>
+      <td>{{ r.pos_group }}</td>
+      <td>{{ r.team or '' }}</td>
+      <td class="n">{{ r.age|num(0) }}</td>
+      <td class="n">{{ r.games|num }}</td>
+      <td class="n">{{ r.true_value_today_musd|money }}</td>
+      <td class="n">{{ r.cap_hit_today_musd|money }}</td>
+      <td class="n {{ 'pos' if r.surplus_today_musd > 0 else 'neg' }}">{{ r.surplus_today_musd|money }}</td>
+      <td class="n" title="Percentile of true value among {{ r.pos_group }}s that season">{{ r.value_pctile|num }}</td>
+      <td><a class="small" href="/value/alternatives/{{ r.gsis_id }}?season={{ season }}">Similar for less</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="11" class="muted">No players match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted small">Top 100. Only players with a cap hit on file and a true value of at least 0.5% of the cap. A season still in progress is scored at its current pace.</p>
+{% endblock %}

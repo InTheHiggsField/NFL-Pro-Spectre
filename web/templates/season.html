@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ season }} season · NFL Pro Spectre{% endblock %}
+{% block content %}
+<div class="card-head">
+  <h1>{{ season }} season</h1>
+  <form method="get" onsubmit="location.href='/seasons/'+this.s.value; return false;">
+    <select name="s" onchange="this.form.onsubmit()">{% for s in all_seasons %}<option {% if s == season %}selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+  </form>
+</div>
+
+<h2>Standings</h2>
+<div class="grid4">
+  {% for div, teams in divisions|dictsort %}
+  <div class="card">
+    <h3>{{ div }}</h3>
+    <table class="data compact">
+      <thead><tr><th>Team</th><th class="n">W</th><th class="n">L</th><th class="n">T</th><th class="n">Diff</th></tr></thead>
+      <tbody>{% for t in teams %}<tr>
+        <td><a href="/teams/{{ t.team }}?season={{ season }}">{{ t.team_code_that_season }}</a>
+          {% if t.won_super_bowl %}<span class="badge gold">SB</span>{% elif t.made_playoffs %}<span class="badge">P</span>{% endif %}</td>
+        <td class="n">{{ t.wins }}</td><td class="n">{{ t.losses }}</td><td class="n">{{ t.ties }}</td>
+        <td class="n">{{ '%+d'|format(t.point_diff or 0) }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+  {% endfor %}
+</div>
+
+{% if playoffs %}
+<h2>Playoffs</h2>
+<table class="data">
+  <thead><tr><th>Round</th><th>Date</th><th>Away</th><th class="n">Score</th><th>Home</th></tr></thead>
+  <tbody>{% for g in playoffs %}<tr><td>{{ {'WC':'Wild card','DIV':'Divisional','CON':'Conference','SB':'Super Bowl'}.get(g.game_type, g.game_type) }}</td>
+    <td>{{ g.gameday }}</td><td>{{ g.away_team }}</td>
+    <td class="n">{% if g.home_score is not none %}{{ g.away_score|int }}-{{ g.home_score|int }}{% endif %}</td><td>{{ g.home_team }}</td></tr>{% endfor %}</tbody>
+</table>
+{% endif %}
+
+<h2>Leaders</h2>
+<div class="grid3">
+  {% for col, label, rows in boards %}
+  <div class="card">
+    <h3><a href="/players?season={{ season }}&sort={{ col }}">{{ label }}</a></h3>
+    <ol class="leaders">
+      {% for r in rows %}<li><a href="/players/{{ r.player_id }}">{{ r.player_display_name }}</a>
+        <span class="muted">{{ r.position }} · {{ r.recent_team }}</span><b>{{ r.value|num(1 if col in ('def_sacks','fantasy_points_ppr') else 0) }}</b></li>{% endfor %}
+    </ol>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

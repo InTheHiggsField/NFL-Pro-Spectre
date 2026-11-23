@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ base + 1 }} projections · NFL Pro Spectre{% endblock %}
+{% block content %}
+<h1>{{ base + 1 }} projections</h1>
+<p class="muted">Projected true value for {{ base + 1 }}, from each player's {{ base }}{% if base == bases[0] and bases|length > 1 %} pace so far{% endif %} and {{ base - 1 }} seasons.
+  <b>Strong</b> means projected at least 15% above his {{ base }} value, <b>Weak</b> at least 15% below. <a href="/models">How accurate is this?</a></p>
+<form class="filters" method="get" action="/projections">
+  <label>Projecting
+    <select name="base">{% for b in bases %}<option value="{{ b }}" {% if b == base %}selected{% endif %}>{{ b + 1 }} (from {{ b }})</option>{% endfor %}</select>
+  </label>
+  <label>Position
+    <select name="pos"><option value="">All</option>
+      {% for p in positions %}<option value="{{ p }}" {% if p == pos %}selected{% endif %}>{{ pos_names[p] }}</option>{% endfor %}</select>
+  </label>
+  <label>Outlook
+    <select name="outlook"><option value="">All</option>
+      {% for o in ['Strong', 'Steady', 'Weak'] %}<option {% if o == outlook %}selected{% endif %}>{{ o }}</option>{% endfor %}</select>
+  </label>
+  <label>Sort by
+    <select name="sort">
+      <option value="projected" {% if sort == 'projected' %}selected{% endif %}>Highest projected value</option>
+      <option value="rise" {% if sort == 'rise' %}selected{% endif %}>Biggest rise</option>
+      <option value="fall" {% if sort == 'fall' %}selected{% endif %}>Biggest drop</option>
+    </select>
+  </label>
+  <button class="btn" type="submit">Show</button>
+</form>
+<div class="scroll">
+<table class="data sortable">
+  <thead><tr><th>#</th><th>Player</th><th>Pos</th><th>Team</th><th class="n">Age</th>
+    <th class="n">{{ base }} value</th><th class="n">{{ base + 1 }} projected</th><th class="n">Change</th><th>Outlook</th>
+    {% if rows and rows[0].actual_value_pct is not none %}<th class="n">{{ base + 1 }} so far</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td class="muted">{{ loop.index }}</td>
+      <td><a href="/players/{{ r.gsis_id }}">{{ r.display_name }}</a></td>
+      <td>{{ r.pos_group }}</td><td>{{ r.team or '' }}</td><td class="n">{{ r.age|num(0) }}</td>
+      <td class="n">{{ (r.base_value_pct * latest_cap)|money }}</td>
+      <td class="n"><b>{{ (r.projected_value_pct * latest_cap)|money }}</b></td>
+      <td class="n {{ 'pos' if r.projected_value_pct > r.base_value_pct else 'neg' }}">{{ '%+.0f'|format((r.projected_value_pct / [r.base_value_pct, 0.002]|max - 1) * 100) }}%</td>
+      <td><span class="tag {{ r.outlook|lower }}">{{ r.outlook }}</span></td>
+      {% if rows[0].actual_value_pct is not none %}<td class="n">{{ (r.actual_value_pct * latest_cap)|money if r.actual_value_pct is not none else '–' }}</td>{% endif %}
+    </tr>
+  {% else %}
+    <tr><td colspan="10" class="muted">No players match.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted small">Values are in today's cap dollars ({{ latest_cap|money }} cap). Backups and special teamers worth under 1% of the cap are left out.</p>
+{% endblock %}

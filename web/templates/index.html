@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Every NFL player, team and season since 1999</h1>
+  <p class="muted">Stats, rosters back to 1920, contracts and cap hits. Search above, or start here.</p>
+  <div class="quick">
+    <a class="btn" href="/players?season={{ season }}&position=QB&sort=passing_yards">{{ season }} quarterbacks</a>
+    <a class="btn" href="/seasons/{{ season }}">{{ season }} standings</a>
+    <a class="btn" href="/teams">All 32 teams</a>
+  </div>
+</section>
+
+<h2>{{ season }} leaders <span class="muted small">regular season</span></h2>
+<div class="grid3">
+  {% for col, label, rows in boards %}
+  <div class="card">
+    <h3><a href="/players?season={{ season }}&sort={{ col }}">{{ label }}</a></h3>
+    <ol class="leaders">
+      {% for r in rows %}
+      <li><a href="/players/{{ r.player_id }}">{{ r.player_display_name }}</a>
+        <span class="muted">{{ r.recent_team }}</span><b>{{ r.value|num(1 if col in ('def_sacks','fantasy_points_ppr') else 0) }}</b></li>
+      {% endfor %}
+    </ol>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Teams</h2>
+<div class="logos">
+  {% for t in teams %}
+  <a href="/teams/{{ t.team_abbr }}" title="{{ t.team_name }}"><img src="{{ t.team_logo_espn }}" alt="{{ t.team_abbr }}" loading="lazy"></a>
+  {% endfor %}
+</div>
+<p class="muted small">Database built {{ info.built_at }} through the {{ info.last_season }} season.</p>
+{% endblock %}

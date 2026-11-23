@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NFL Pro Spectre{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/vendor/chart-4.4.1.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="/">NFL Pro <span>Spectre</span></a>
+    <nav>
+      <a href="/players">Players</a>
+      <a href="/teams">Teams</a>
+      <a href="/seasons">Seasons</a>
+      <a href="/value">Value</a>
+      <a href="/projections">Projections</a>
+    </nav>
+    <form class="search" action="/search" method="get" autocomplete="off">
+      <input type="search" name="q" id="search-box" placeholder="Search a player, team or year" value="{{ q or '' }}">
+      <div class="suggest" id="search-suggest" hidden></div>
+    </form>
+  </div>
+</header>
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+<footer class="wrap footer">
+  Data: nflverse (NFL, Pro Football Reference, Next Gen Stats, ESPN, OverTheCap). Money in millions of US dollars.
+  <a href="/models">How the models work</a>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

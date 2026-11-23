@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ t.team_name }} {{ season }} · NFL Pro Spectre{% endblock %}
+{% block content %}
+<section class="profile" style="--team: {{ t.team_color }}">
+  <img class="logo" src="{{ t.team_logo_espn }}" alt="">
+  <div>
+    <h1>{{ t.team_name }}</h1>
+    <p class="facts muted">{{ t.team_division }}</p>
+  </div>
+  <form class="season-pick" method="get">
+    <label>Season <select name="season" onchange="this.form.submit()">
+      {% for s in seasons %}<option {% if s == season %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+  </form>
+</section>
+
+{% if ts %}
+<div class="stats-row">
+  <div class="stat"><b>{{ ts.wins }}-{{ ts.losses }}{% if ts.ties %}-{{ ts.ties }}{% endif %}</b><span>Record</span></div>
+  <div class="stat"><b>{{ ts.points_for|num }}</b><span>Points for</span></div>
+  <div class="stat"><b>{{ ts.points_against|num }}</b><span>Points against</span></div>
+  <div class="stat"><b>{{ '%+d'|format(ts.point_diff or 0) }}</b><span>Point diff</span></div>
+  <div class="stat"><b>{{ ts.passing_yards|num }}</b><span>Pass yds</span></div>
+  <div class="stat"><b>{{ ts.rushing_yards|num }}</b><span>Rush yds</span></div>
+  <div class="stat"><b>{{ ts.def_sacks|num(1) }}</b><span>Sacks</span></div>
+  <div class="stat"><b>{% if ts.won_super_bowl %}Won Super Bowl{% elif ts.made_playoffs %}Playoffs ({{ ts.playoff_wins }} W){% else %}No playoffs{% endif %}</b><span>Postseason</span></div>
+  {% if payroll %}<div class="stat"><b>{{ payroll.cap_hit_musd|money }}</b><span>Cap spent{% if payroll.salary_cap_musd %} of {{ payroll.salary_cap_musd|money }}{% endif %}</span></div>{% endif %}
+</div>
+{% endif %}
+
+<section class="card">
+  <h2>Wins by season</h2>
+  <canvas id="history-chart" height="70"></canvas>
+</section>
+
+<div class="two-col">
+  <div>
+    <h2>{{ season }} games</h2>
+    <table class="data">
+      <thead><tr><th>Wk</th><th>Date</th><th>Opponent</th><th class="n">Score</th><th></th></tr></thead>
+      <tbody>
+      {% for g in games %}
+        {% set home = g.home_f == t.team_abbr %}
+        {% set us = g.home_score if home else g.away_score %}{% set them = g.away_score if home else g.home_score %}
+        <tr>
+          <td>{{ g.week if g.game_type == 'REG' else g.game_type }}</td>
+          <td>{{ g.gameday }}</td>
+          <td>{{ 'vs' if home else '@' }} <a href="/teams/{{ g.away_f if home else g.home_f }}?season={{ season }}">{{ g.away_team if home else g.home_team }}</a></td>
+          <td class="n">{% if us is not none %}{{ us|int }}-{{ them|int }}{% endif %}</td>
+          <td>{% if us is not none %}<span class="wl {{ 'w' if us > them else 'l' if us < them else 't' }}">{{ 'W' if us > them else 'L' if us < them else 'T' }}</span>{% endif %}</td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="muted">No games on record (game data starts in 1999).</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    {% if top_cap %}
+    <h2>Biggest {{ season }} cap hits</h2>
+    <table class="data">
+      <thead><tr><th>Player</th><th>Pos</th><th class="n">Cap hit</th><th class="n">% of cap</th></tr></thead>
+      <tbody>{% for c in top_cap %}<tr><td>{% if c.gsis_id %}<a href="/players/{{ c.gsis_id }}">{{ c.player }}</a>{% else %}{{ c.player }}{% endif %}</td>
+        <td>{{ c.position }}</td><td class="n">{{ c.cap_hit_musd|money }}</td><td class="n">{{ c.cap_pct|pct }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+  </div>
+  <div>
+    <h2>{{ season }} roster</h2>
+    <table class="data">
+      <thead><tr><th>#</th><th>Player</th><th>Pos</th><th class="n">G</th><th class="n">PPR</th><th class="n">Cap hit</th></tr></thead>
+      <tbody>
+      {% for r in roster %}
+        <tr><td class="muted">{{ r.jersey_number or '' }}</td>
+          <td>{% if r.gsis_id %}<a href="/players/{{ r.gsis_id }}">{{ r.full_name }}</a>{% else %}{{ r.full_name }}{% endif %}</td>
+          <td>{{ r.position }}</td><td class="n">{{ r.games|num }}</td><td class="n">{{ r.fantasy_points_ppr|num(1) }}</td>
+          <td class="n">{{ r.cap_hit_musd|money }}</td></tr>
+      {% else %}<tr><td colspan="6" class="muted">No roster on record for this season.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const h = {{ history|tojson }};
+  const css = getComputedStyle(document.documentElement);
+  const accent = css.getPropertyValue("--accent").trim(), gold = css.getPropertyValue("--gold").trim();
+  new Chart(document.getElementById("history-chart"), {
+    type: "bar",
+    data: { labels: h.map(r => r.season), datasets: [{ label: "Wins", data: h.map(r => r.wins),
+      backgroundColor: h.map(r => r.won_super_bowl ? gold : accent) }] },
+    options: { plugins: { legend: { display: false },
+      tooltip: { callbacks: { afterLabel: c => { const r = h[c.dataIndex];
+        return `${r.wins}-${r.losses}${r.ties ? "-" + r.ties : ""}` + (r.won_super_bowl ? " · Super Bowl champs" : r.made_playoffs ? " · Playoffs" : ""); } } } },
+      onClick: (e, els) => { if (els.length) location.search = "?season=" + h[els[0].index].season; } }
+  });
+});
+</script>
+{% endblock %}

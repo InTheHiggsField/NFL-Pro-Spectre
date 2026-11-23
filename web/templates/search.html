@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Search: {{ q }} · NFL Pro Spectre{% endblock %}
+{% block content %}
+<h1>Results for “{{ q }}”</h1>
+{% if teams %}
+<h2>Teams</h2>
+<div class="logos">
+  {% for t in teams %}<a href="/teams/{{ t.team_abbr }}"><img src="{{ t.team_logo_espn }}" alt=""> {{ t.team_name }}</a>{% endfor %}
+</div>
+{% endif %}
+<h2>Players</h2>
+{% if players %}
+<table class="data">
+  <thead><tr><th></th><th>Name</th><th>Pos</th><th>Latest team</th><th>Years</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for p in players %}
+    <tr>
+      <td class="thumb">{% if p.headshot %}<img src="{{ p.headshot }}" alt="" loading="lazy">{% endif %}</td>
+      <td><a href="/players/{{ p.gsis_id }}">{{ p.display_name }}</a></td>
+      <td>{{ p.position or '' }}</td>
+      <td>{% if p.latest_team %}<a href="/teams/{{ p.latest_team }}">{{ p.latest_team }}</a>{% endif %}</td>
+      <td>{{ p.rookie_season or '?' }}–{{ p.last_season or '?' }}</td>
+      <td>{{ p.status or '' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No players match. Try a last name, like “Kelce”.</p>
+{% endif %}
+{% endblock %}

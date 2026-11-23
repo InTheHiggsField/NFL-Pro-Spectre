@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ p.display_name }} · NFL Pro Spectre{% endblock %}
+{% block content %}
+<section class="profile">
+  {% if p.headshot %}<img class="headshot" src="{{ p.headshot }}" alt="">{% endif %}
+  <div>
+    <h1>{{ p.display_name }}</h1>
+    <p class="facts">
+      <span>{{ p.position or '' }}</span>
+      {% if p.latest_team %}<span><a href="/teams/{{ p.latest_team }}">{{ p.latest_team }}</a></span>{% endif %}
+      {% if p.jersey_number %}<span>#{{ p.jersey_number }}</span>{% endif %}
+      {% if p.height %}<span>{{ (p.height // 12)|int }}′{{ (p.height % 12)|int }}″, {{ p.weight|num }} lb</span>{% endif %}
+      {% if p.birth_date %}<span>Born {{ p.birth_date }}</span>{% endif %}
+      {% if p.college_name %}<span>{{ p.college_name }}</span>{% endif %}
+    </p>
+    <p class="facts muted">
+      {% if p.draft_year %}Drafted {{ p.draft_year }}, round {{ p.draft_round|num }}, pick {{ p.draft_pick|num }} by {{ p.draft_team }}{% else %}Undrafted or draft unknown{% endif %}
+      · Seasons {{ p.rookie_season or '?' }}–{{ p.last_season or '?' }} · Status {{ p.status or '?' }}
+    </p>
+  </div>
+</section>
+
+{% if forecast %}
+<section class="grid3 outlook-row">
+  {% for f in forecast %}
+  <div class="card outlook {{ f.outlook|lower }}">
+    <span class="muted small">{{ f.projected_season }} outlook{% if f.base_season == f.projected_season - 1 and loop.length > 1 and not loop.last %} (preseason){% endif %}</span>
+    <b>{{ f.outlook }}</b>
+    <span>Projected value {{ (f.projected_value_pct * latest_cap)|money }} <span class="muted">vs {{ (f.base_value_pct * latest_cap)|money }} in {{ f.base_season }}</span></span>
+  </div>
+  {% endfor %}
+  {% set lastv = values[reg[-1].season] if reg and reg[-1].season in values else none %}
+  {% if lastv %}
+  <div class="card outlook">
+    <span class="muted small">{{ lastv.season }} true value{% if lastv.partial_season %} (season pace){% endif %}</span>
+    <b>{{ lastv.true_value_today_musd|money }}</b>
+    <span>Cost {{ lastv.cap_hit_today_musd|money }} · <a href="/value/alternatives/{{ p.gsis_id }}?season={{ lastv.season }}">Cheaper players like him</a></span>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if reg %}
+<section class="card">
+  <div class="card-head">
+    <h2>Career by season</h2>
+    <select id="chart-stat">
+      {% for label in chart.series.keys() %}<option>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <canvas id="career-chart" height="90"></canvas>
+</section>
+
+<h2>Regular season</h2>
+<div class="scroll">
+<table class="data">
+  <thead><tr><th>Season</th><th>Team</th><th class="n">Age</th><th class="n">G</th>
+    {% for c, label, d in cols %}<th class="n">{{ label }}</th>{% endfor %}<th class="n">Cap hit</th><th class="n">% of cap</th>
+    {% if values %}<th class="n" title="What this season's stats alone are worth on the open market, in today's cap dollars">Production</th><th class="n" title="Discount for being past the usual career end at his position">Age adj.</th><th class="n" title="Production value after the age adjustment, in today's cap dollars">True value</th><th class="n" title="True value minus cap hit, in today's cap dollars">Surplus</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for r in reg %}
+    <tr>
+      <td><a href="/seasons/{{ r.season }}">{{ r.season }}</a></td>
+      <td><a href="/teams/{{ r.recent_team }}?season={{ r.season }}">{{ r.recent_team }}</a></td>
+      <td class="n">{{ r.age|num(0) }}</td><td class="n">{{ r.games|num }}</td>
+      {% for c, label, d in cols %}<td class="n">{{ r[c]|num(d) }}</td>{% endfor %}
+      <td class="n">{{ r.cap_hit_musd|money }}</td><td class="n">{{ r.cap_pct|pct }}</td>
+      {% if values %}{% set v = values.get(r.season) %}
+      <td class="n">{% if v %}{{ (v.stats_value_pct * latest_cap)|money }}{% else %}–{% endif %}</td>
+      <td class="n {% if v and v.runway_factor < 0.995 %}neg{% endif %}" {% if v %}title="Age {{ v.age }}, {{ '%.1f'|format(-v.years_left) if v.years_left < 0 else '%.1f'|format(v.years_left) }} years {{ 'past' if v.years_left < 0 else 'before' }} the usual career end for his position"{% endif %}>{% if v and v.runway_factor < 0.995 %}×{{ '%.2f'|format(v.runway_factor) }}{% elif v %}–{% endif %}</td>
+      <td class="n">{% if v %}{{ v.true_value_today_musd|money }}{% else %}–{% endif %}</td>
+      <td class="n {% if v and v.surplus_today_musd is not none %}{{ 'pos' if v.surplus_today_musd > 0 else 'neg' }}{% endif %}">{% if v and v.surplus_today_musd is not none %}{{ v.surplus_today_musd|money }}{% else %}–{% endif %}</td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><td>Career</td><td></td><td></td><td class="n">{{ totals.games|num }}</td>
+    {% for c, label, d in cols %}<td class="n">{% if c in totals %}{{ totals[c]|num(d) }}{% endif %}</td>{% endfor %}<td></td><td></td>{% if values %}<td></td><td></td><td></td><td></td>{% endif %}</tr></tfoot>
+</table>
+</div>
+
+{% if post %}
+<h2>Playoffs</h2>
+<div class="scroll">
+<table class="data">
+  <thead><tr><th>Season</th><th>Team</th><th class="n">G</th>
+    {% for c, label, d in cols %}<th class="n">{{ label }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in post %}
+    <tr><td>{{ r.season }}</td><td>{{ r.recent_team }}</td><td class="n">{{ r.games|num }}</td>
+      {% for c, label, d in cols %}<td class="n">{{ r[c]|num(d) }}</td>{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% elif roster %}
+<h2>Roster history</h2>
+<p class="muted">Detailed stats start in 1999. This player's roster record:</p>
+<table class="data">
+  <thead><tr><th>Season</th><th>Team</th><th>Pos</th><th>#</th><th>Status</th></tr></thead>
+  <tbody>{% for r in roster %}<tr><td>{{ r.season }}</td>
+    <td>{% if r.season >= 1999 %}<a href="/teams/{{ r.team }}?season={{ r.season }}">{{ r.team_code }}</a>{% else %}{{ r.team_code }}{% endif %}</td>
+    <td>{{ r.position or '' }}</td><td>{{ r.jersey_number or '' }}</td><td>{{ r.status or '' }}</td></tr>{% endfor %}</tbody>
+</table>
+{% else %}
+<p class="muted">No stats or roster records for this player yet.</p>
+{% endif %}
+
+{% if contracts %}
+<h2>Contracts</h2>
+<div class="scroll">
+<table class="data">
+  <thead><tr><th>Signed</th><th>Team</th><th class="n">Years</th><th class="n">Total</th><th class="n">Per year</th>
+    <th class="n">Guaranteed</th><th class="n">% of cap</th><th class="n">Per year in today's cap $</th><th>Active</th></tr></thead>
+  <tbody>
+  {% for c in contracts %}
+    <tr><td>{{ c.year_signed or '?' }}</td><td>{{ c.team or '' }}</td><td class="n">{{ c.years|num }}</td>
+      <td class="n">{{ c.value_musd|money }}</td><td class="n">{{ c.apy_musd|money }}</td>
+      <td class="n">{{ c.guaranteed_musd|money }}</td><td class="n">{{ c.apy_cap_pct|pct }}</td>
+      <td class="n">{{ c.apy_cap_adj_musd|money }}</td><td>{{ 'Yes' if c.is_active else '' }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if cap %}
+<h2>Cap hit by season</h2>
+<div class="scroll">
+<table class="data">
+  <thead><tr><th>Season</th><th>Team</th><th class="n">Cap hit</th><th class="n">% of cap</th><th class="n">Cash paid</th><th class="n">Base salary</th></tr></thead>
+  <tbody>{% for c in cap %}<tr><td>{{ c.season }}</td><td>{{ c.team or '' }}</td><td class="n">{{ c.cap_hit_musd|money }}</td>
+    <td class="n">{{ c.cap_pct|pct }}</td><td class="n">{{ c.cash_paid_musd|money }}</td><td class="n">{{ c.base_salary_musd|money }}</td></tr>{% endfor %}</tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if reg %}
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const data = {{ chart|tojson }};
+  const sel = document.getElementById("chart-stat");
+  const css = getComputedStyle(document.documentElement);
+  const accent = css.getPropertyValue("--accent").trim(), muted = css.getPropertyValue("--muted").trim();
+  const gold = css.getPropertyValue("--gold").trim();
+  const chart = new Chart(document.getElementById("career-chart"), {
+    data: {
+      labels: data.seasons,
+      datasets: [
+        { type: "bar", label: sel.value, data: data.series[sel.value], backgroundColor: accent, yAxisID: "y" },
+        { type: "line", label: data.value ? "Cap hit (today's $M)" : "Cap hit ($M)", data: data.cap,
+          borderColor: muted, backgroundColor: muted, yAxisID: "y2", spanGaps: true, tension: 0.2 },
+        ...(data.value ? [{ type: "line", label: "True value (today's $M)", data: data.value, borderColor: gold,
+          backgroundColor: gold, yAxisID: "y2", spanGaps: true, tension: 0.2 }] : [])
+      ]
+    },
+    options: {
+      responsive: true, interaction: { mode: "index", intersect: false },
+      scales: { y: { beginAtZero: true, title: { display: true, text: sel.value } },
+                y2: { position: "right", beginAtZero: true, grid: { display: false }, title: { display: true, text: "$M" } } },
+      plugins: { legend: { position: "bottom" } }
+    }
+  });
+  sel.addEventListener("change", () => {
+    chart.data.datasets[0].label = sel.value;
+    chart.data.datasets[0].data = data.series[sel.value];
+    chart.options.scales.y.title.text = sel.value;
+    chart.update();
+  });
+});
+</script>
+{% endif %}
+{% endblock %}

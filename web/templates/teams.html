@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Teams · NFL Pro Spectre{% endblock %}
+{% block content %}
+<h1>Teams</h1>
+{% for conf in ['AFC', 'NFC'] %}
+<h2>{{ conf }}</h2>
+<div class="grid4">
+  {% for div, members in teams|selectattr('team_conf', 'equalto', conf)|groupby('team_division') %}
+  <div class="card">
+    <h3>{{ div }}</h3>
+    {% for t in members %}
+    <a class="team-link" href="/teams/{{ t.team_abbr }}"><img src="{{ t.team_logo_espn }}" alt="" loading="lazy">{{ t.team_name }}</a>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

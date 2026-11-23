@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}How the models work · NFL Pro Spectre{% endblock %}
+{% block content %}
+{% set tv = m.true_value %}{% set pr = m.projection %}
+<h1>How the models work</h1>
+<p class="muted">Trained {{ m.trained_at }}. Retrained automatically each time the database is rebuilt.</p>
+
+<section class="card">
+  <h2>True value</h2>
+  <p>Every veteran contract on file is a price the market paid for a player. The model looks at the season before each
+    contract was signed (box score, snap counts, age against the position's usual career, experience, draft slot,
+    position, and the season before that) and
+    learns what share of the salary cap that production earned. A share of the cap is used instead of dollars so a
+    2014 deal and a 2025 deal are comparable; multiplying by today's cap turns it back into today's dollars.</p>
+  <p>Applied to any player-season, it answers: <i>if this player hit free agency after this season, what would he get?</i>
+    Players on rookie deals are scored as if they were veterans, so their surplus shows how much of a bargain the
+    rookie contract is.</p>
+  {% if tv %}
+  <div class="stats-row">
+    <div class="stat"><b>{{ tv.r2 }}</b><span>R² on {{ tv.test_contracts|num }} contracts signed {{ tv.test_years }} (never seen in training)</span></div>
+    <div class="stat"><b>{{ tv.baseline_r2_position_median }}</b><span>R² of guessing each position's typical price</span></div>
+    <div class="stat"><b>{{ tv.mae_pct_of_cap }}%</b><span>Typical error, share of the cap</span></div>
+    <div class="stat"><b>{{ tv.spearman }}</b><span>Rank correlation with real prices</span></div>
+  </div>
+  <table class="data compact">
+    <thead><tr><th>Position</th><th class="n">Test contracts</th><th class="n">R²</th><th class="n">Typical error (% of cap)</th></tr></thead>
+    <tbody>{% for pos, r in tv.by_position.items() %}<tr><td>{{ pos_names.get(pos, pos) }}</td><td class="n">{{ r.n }}</td>
+      <td class="n">{{ r.r2 }}</td><td class="n">{{ r.mae_pct_of_cap }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <p class="muted small">Weakest where the box score says little: centers, linebackers, and specialists, whose pay is set by things these stats don't capture.</p>
+  {% endif %}
+</section>
+
+<section class="card" style="margin-top:16px">
+  <h2>Age and recent seasons</h2>
+  <p><b>Only recent seasons count.</b> True value uses a player's latest season and the one before it, nothing older.
+    An MVP year five seasons ago adds nothing. (Using only the latest season was tested too: accuracy dropped
+    {% if tv.r2 %}from R² {{ tv.r2 }}{% endif %} to about 0.72 and values swung wildly year to year, so one prior season stays in.)</p>
+  <p><b>Age is measured against the position's usual career.</b> A 33-year-old kicker is mid-career; a 33-year-old
+    running back is past the end. For each position, the typical career end is the average age in the final season of
+    players with 4+ season careers that ended 2000–2023. The model is not allowed to value a player higher for having
+    less runway left.</p>
+  <div class="two-col">
+    <table class="data compact">
+      <thead><tr><th>Position</th><th class="n">Usual career end (age)</th><th class="n">Usual career length (years)</th></tr></thead>
+      <tbody>{% for r in tv.career_norms|sort(attribute='career_end_age') %}<tr><td>{{ pos_names.get(r.pos_group, r.pos_group) }}</td>
+        <td class="n">{{ r.career_end_age }}</td><td class="n">{{ r.career_length }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <div>
+      <p><b>Age adjustment.</b> Old players who still produce are rare, and the ones in the data (Brady, Brees) were
+        exceptional, so stats alone overrate them. Comparing real contracts with stats-only prices shows how much the
+        market discounts players past the usual career end; that curve is applied as the age adjustment.</p>
+      <table class="data compact">
+        <thead><tr><th>Years past usual career end</th><th class="n">Value kept</th></tr></thead>
+        <tbody>{% for r in tv.runway_curve if r.years_left <= 0 and r.years_left % 2 == 0 %}<tr><td>{{ -r.years_left }}{% if r.years_left == -12 %}+{% endif %}</td>
+          <td class="n">{{ (r.factor * 100)|round|int }}%</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="card" style="margin-top:16px">
+  <h2>Next-season projections</h2>
+  <p>A second model predicts a player's true value next season from this season and last season. It is tested with a
+    walk-forward backtest: to predict each season from {{ pr.backtest_seasons.split('-')[0] }} on, it was trained only on
+    earlier seasons, the same way it predicts a real future season. It only learns from players who played at least
+    4 games the next year, so it predicts how well someone will play, not whether he'll be healthy or on a roster.</p>
+  <div class="stats-row">
+    <div class="stat"><b>{{ pr.r2 }}</b><span>R² over {{ pr.player_seasons|num }} player-seasons ({{ pr.backtest_seasons }})</span></div>
+    <div class="stat"><b>{{ pr.naive_r2_same_as_this_season }}</b><span>R² of "same as this season"</span></div>
+    <div class="stat"><b>{{ (pr.strong_hit_rate * 100)|round|int }}%</b><span>"Strong" calls that came true (base rate {{ (pr.base_rate_strong * 100)|round|int }}%)</span></div>
+    <div class="stat"><b>{{ (pr.weak_hit_rate * 100)|round|int }}%</b><span>"Weak" calls that came true (base rate {{ (pr.base_rate_weak * 100)|round|int }}%)</span></div>
+    <div class="stat"><b>{{ (pr.strong_wrong_way_rate * 100)|round|int }}%</b><span>"Strong" calls that went the other way</span></div>
+  </div>
+  <table class="data compact">
+    <thead><tr><th>Season predicted</th><th class="n">Players</th><th class="n">Model R²</th><th class="n">"Same as last year" R²</th></tr></thead>
+    <tbody>{% for s, r in pr.by_target_season.items() %}<tr><td>{{ s }}</td><td class="n">{{ r.n }}</td><td class="n">{{ r.r2 }}</td><td class="n">{{ r.naive_r2 }}</td></tr>{% endfor %}</tbody>
+  </table>
+</section>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Cheaper than {{ t.display_name }} · NFL Pro Spectre{% endblock %}
+{% block content %}
+<h1>Can't afford {{ t.display_name }}?</h1>
+<p>In {{ t.season }}, <a href="/players/{{ t.gsis_id }}">{{ t.display_name }}</a> ({{ pos_names.get(t.pos_group, t.pos_group) }}) produced
+  <b>{{ t.true_value_today_musd|money }}</b> of value and cost <b>{{ t.cap_hit_today_musd|money }}</b> (today's dollars).
+  These {{ pos_names.get(t.pos_group, t.pos_group)|lower }}s gave at least 80% of that value for less.</p>
+<form class="filters" method="get">
+  <label>Season <select name="season" onchange="this.form.submit()">
+    {% for s in seasons %}<option value="{{ s.season }}" {% if s.season == t.season %}selected{% endif %}>{{ s.season }}</option>{% endfor %}</select></label>
+</form>
+<table class="data sortable">
+  <thead><tr><th>Player</th><th>Team</th><th class="n">Age</th><th class="n">True value</th><th class="n">vs {{ t.display_name.split(' ')[-1] }}</th>
+    <th class="n">Cap hit</th><th class="n">Saves</th></tr></thead>
+  <tbody>
+  {% for r in alts %}
+    <tr><td><a href="/players/{{ r.gsis_id }}">{{ r.display_name }}</a></td><td>{{ r.team or '' }}</td><td class="n">{{ r.age|num(0) }}</td>
+      <td class="n">{{ r.true_value_today_musd|money }}</td>
+      <td class="n">{{ (r.true_value_pct / t.true_value_pct * 100)|round|int }}%</td>
+      <td class="n">{{ r.cap_hit_today_musd|money }}</td>
+      <td class="n pos">{% if t.cap_hit_today_musd is not none %}{{ (t.cap_hit_today_musd - r.cap_hit_today_musd)|money }}{% endif %}</td></tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">Nobody at this position matched that value for less in {{ t.season }}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
