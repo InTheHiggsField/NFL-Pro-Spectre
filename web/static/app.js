@@ -107,6 +107,11 @@
     document.addEventListener("click", (e) => { if (!list.contains(e.target) && e.target !== box) close(); });
   }
 
+  // ---------------------------------------------------------------- highlight the current section in the nav
+  document.querySelectorAll("header nav a").forEach((a) => {
+    if (location.pathname.startsWith(a.pathname.replace(/\/$/, ""))) a.classList.add("on");
+  });
+
   // ---------------------------------------------------------------- sortable tables
   window.makeSortable = (table) => {
     table.querySelectorAll("thead th").forEach((th, col) => {

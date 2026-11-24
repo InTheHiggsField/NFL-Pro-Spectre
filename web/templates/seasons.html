@@ -5,8 +5,9 @@
 <div class="season-grid">
   {% for s in seasons %}
   <a class="card season-card" href="/seasons/{{ s }}">
-    <b>{{ s }}</b>
-    <span class="muted small">{% if s in champs %}Champion: {{ champs[s].team_name }}{% else %}In progress{% endif %}</span>
+    <div><b>{{ s }}</b>
+    <span class="muted small">{% if s in champs %}{{ champs[s].team_name }}{% else %}In progress{% endif %}</span></div>
+    {% if s in champs and champs[s].team_logo_espn %}<img src="{{ champs[s].team_logo_espn }}" alt="" loading="lazy" title="Super Bowl champion">{% endif %}
   </a>
   {% endfor %}
 </div>

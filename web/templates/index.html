@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero">
+<section class="hero field">
   <h1>Every NFL player, team and season since 1999</h1>
   <p class="muted">Stats, rosters back to 1920, contracts and cap hits. Search above, or start here.</p>
   <div class="quick">
     <a class="btn" href="/players?season={{ season }}&position=QB&sort=passing_yards">{{ season }} quarterbacks</a>
     <a class="btn" href="/seasons/{{ season }}">{{ season }} standings</a>
-    <a class="btn" href="/teams">All 32 teams</a>
+    <a class="btn ghost" href="/value">Find bargains</a>
+    <a class="btn ghost" href="/teams">All 32 teams</a>
   </div>
 </section>
 
@@ -26,7 +27,7 @@
 </div>
 
 <h2>Teams</h2>
-<div class="logos">
+<div class="logo-wall">
   {% for t in teams %}
   <a href="/teams/{{ t.team_abbr }}" title="{{ t.team_name }}"><img src="{{ t.team_logo_espn }}" alt="{{ t.team_abbr }}" loading="lazy"></a>
   {% endfor %}

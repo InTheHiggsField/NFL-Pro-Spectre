@@ -163,7 +163,7 @@ def player_page(request: Request, gsis_id: str, con=Depends(get_db)):
     forecast = [x for x in projs if x["kind"] == "forecast"]
     return render(request, "player.html", p=p, reg=reg, post=post, cols=cols, totals=totals,
                   values=values, forecast=forecast, backtest=[x for x in projs if x["kind"] == "backtest"],
-                  latest_cap=latest_cap,
+                  latest_cap=latest_cap, pteam=Q.team(con, p["latest_team"]) if p.get("latest_team") else None,
                   roster=Q.player_roster_history(con, p), contracts=Q.player_contracts(con, gsis_id),
                   cap=Q.player_cap(con, gsis_id), chart=chart)
 
@@ -190,7 +190,7 @@ def team_page(request: Request, abbr: str, season: int | None = None, con=Depend
 
 @app.get("/seasons", response_class=HTMLResponse)
 def seasons(request: Request, con=Depends(get_db)):
-    champs = Q.rows(con, """SELECT r.season, r.team, f.team_name FROM v_team_record r
+    champs = Q.rows(con, """SELECT r.season, r.team, f.team_name, f.team_logo_espn FROM v_team_record r
                             LEFT JOIN franchises f ON f.team_abbr = r.team WHERE won_super_bowl = 1""")
     champ_by = {c["season"]: c for c in champs}
     return render(request, "seasons.html", seasons=Q.seasons_with_stats(con), champs=champ_by)
